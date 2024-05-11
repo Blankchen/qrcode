@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"
+      integrity="sha512-r6rDA7W6ZeQhvl8S7yRVQUKVHdexq+GAlNkNNqVC7YyIV+NwqCTJe2hDWCiffTyRNOeGEzRRJ9ifvRm/HCzGYg=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    ></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css"
+      integrity="sha512-NhSC1YmyruXifcj/KFRWoC561YpHpc5Jtzgvbuzx5VozKpWvQ+4nXhPdFgmx8xqexRcpAglTj9sIBWINXa8x5w=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+    <!-- vxe talbe -->
+    <!-- 引入樣式 -->
+    <link rel="stylesheet" href="https://unpkg.com/vxe-table/lib/style.css" />
+    <!-- 引入腳本 -->
+    <script src="https://unpkg.com/xe-utils"></script>
+    <script src="https://unpkg.com/vxe-table"></script>
+    <!-- google sheet -->
+    <!-- <script src="https://cdn.jsdelivr.net/npm/google-spreadsheets@2.0.0/lib/spreadsheets.min.js"></script> -->
+    <title>QRCode</title>
+    <style>
+      .container {
+        display: flex;
+        flex-direction: row;
+      }
+      .camera {
+        position: relative;
+        width: 50%;
+      }
+      .title {
+        position: absolute;
+        left: 10px;
+        top: 10px;
+        font-size: 30px;
+        color: red;
+        z-index: 1;
+      }
+      .table {
+        width: 50%;
+        padding: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <div class="container">
+        <div class="camera">
+          <span class="title" v-if="state.currentCode">
+            {{ state.currentCode }} 開始時間: {{ state.startTime }}
+          </span>
+          <qrcode-scanner
+            :qrbox="400"
+            :fps="10"
+            style="width: 100%"
+            @result="onScan"
+          />
+        </div>
+        <div class="table">
+          <div style="margin: 10px;">
+            <a href="https://docs.google.com/spreadsheets/d/1HHtkOXPHY9uC8hw1B-GESRMZXiEJZ3BpNbYDbNgbgfM/edit#gid=0" target="_blank">Google Sheet</a>
+          </div>
+          <vxe-table :data="state.list">
+            <vxe-column field="code" title="Code"></vxe-column>
+            <vxe-column field="startTime" title="開始時間"></vxe-column>
+            <vxe-column field="endTime" title="結束時間"></vxe-column>
+          </vxe-table>
+        </div>
+      </div>
+    </div>
+    <script>
+      const { createApp, reactive } = Vue;
+      const app = createApp({
+        setup() {
+          const state = reactive({
+            currentCode: "",
+            startTime: "",
+            list: [
+              // {
+              //   code: '{"Utility":[{"Ordinary":[{"Device":"POS","code1":"130430833","code2":"D30823666000001","code3":"142359460000000"}]}]}',
+              //   startTime: "5/11/2024, 5:35:39 PM",
+              //   endTime: "5/11/2024, 5:35:43 PM",
+              // },
+              // {
+              //   code: "833001D308236673",
+              //   startTime: "5/11/2024, 5:35:43 PM",
+              //   endTime: "5/11/2024, 5:35:47 PM",
+              // },
+            ],
+          });
+
+          function saveGoogleSheet(data) {
+            const url =
+              "https://script.google.com/macros/s/AKfycbxcrmUYaz5XG9PRSuJbgPb-f5Zc2fRkznwh-73QC-4r2wmRPUHA3XY2aVUY0MPmLz0pgw/exec";
+            fetch(url + "?" + new URLSearchParams(data)).then((res) => {
+              console.log("saveGoogleSheet", res);
+            });
+          }
+
+          function onScan(decodedText, decodedResult) {
+            if (state.currentCode === decodedText) {
+              return;
+            }
+            const now = new Date().toLocaleString();
+            // change new qrcode
+            if (state.currentCode) {
+              const data = {
+                code: decodedText,
+                startTime: state.startTime,
+                endTime: now,
+              };
+              saveGoogleSheet(data);
+              state.list.unshift(data);
+            }
+            state.startTime = now;
+            state.currentCode = decodedText;
+          }
+          return {
+            state,
+            onScan,
+          };
+        },
+      });
+
+      const domId = "qr-code-full-region";
+      app.component("qrcode-scanner", {
+        props: {
+          qrbox: {
+            type: Number,
+            default: 250,
+          },
+          fps: {
+            type: Number,
+            default: 10,
+          },
+        },
+        template: `<div id="${domId}"></div>`,
+        mounted() {
+          const config = {
+            fps: this.fps,
+            qrbox: this.qrbox,
+          };
+          const html5QrcodeScanner = new Html5QrcodeScanner(domId, config);
+          html5QrcodeScanner.render(this.onScanSuccess);
+        },
+        methods: {
+          onScanSuccess(decodedText, decodedResult) {
+            this.$emit("result", decodedText, decodedResult);
+          },
+        },
+      });
+      app.use(VXETable);
+      app.mount("#app");
+    </script>
+  </body>
+</html>
