@@ -66,6 +66,7 @@
         <div class="table">
           <div style="margin: 10px;">
             <a href="https://docs.google.com/spreadsheets/d/1HHtkOXPHY9uC8hw1B-GESRMZXiEJZ3BpNbYDbNgbgfM/edit#gid=0" target="_blank">Google Sheet</a>
+            <button style="margin-left: 10px;" @click="sendLastOne">Send Last One</button>
           </div>
           <vxe-table :data="state.list">
             <vxe-column field="code" title="Code"></vxe-column>
@@ -82,18 +83,8 @@
           const state = reactive({
             currentCode: "",
             startTime: "",
-            list: [
-              // {
-              //   code: '{"Utility":[{"Ordinary":[{"Device":"POS","code1":"130430833","code2":"D30823666000001","code3":"142359460000000"}]}]}',
-              //   startTime: "5/11/2024, 5:35:39 PM",
-              //   endTime: "5/11/2024, 5:35:43 PM",
-              // },
-              // {
-              //   code: "833001D308236673",
-              //   startTime: "5/11/2024, 5:35:43 PM",
-              //   endTime: "5/11/2024, 5:35:47 PM",
-              // },
-            ],
+            list: [],
+            setMap: new Set()
           });
 
           function saveGoogleSheet(data) {
@@ -104,13 +95,28 @@
             });
           }
 
+          function sendLastOne() {
+            if (state.setMap.has(state.currentCode)) {
+              console.log("prevent duplicated code");
+              return
+            }
+            const now = new Date().toLocaleString();
+            const data = {
+                code: state.currentCode,
+                startTime: state.startTime,
+                endTime: now,
+              };
+              saveGoogleSheet(data);
+              state.list.unshift(data);
+          }
+
           function onScan(decodedText, decodedResult) {
             if (state.currentCode === decodedText) {
               return;
             }
             const now = new Date().toLocaleString();
             // change new qrcode
-            if (state.currentCode) {
+            if (state.currentCode && !state.setMap.has(decodedText)) {
               const data = {
                 code: decodedText,
                 startTime: state.startTime,
@@ -118,6 +124,7 @@
               };
               saveGoogleSheet(data);
               state.list.unshift(data);
+              state.setMap.add(decodedText)
             }
             state.startTime = now;
             state.currentCode = decodedText;
@@ -125,6 +132,7 @@
           return {
             state,
             onScan,
+            sendLastOne,
           };
         },
       });
