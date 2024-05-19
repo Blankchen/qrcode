@@ -75,15 +75,20 @@
       </div>
     </div>
     <script type="text/x-template" id="qrcode-scanner">
-      <div style="display: flex;justify-content: space-between;align-items: center;padding:10px">
+      <div style="display: flex;justify-content: flex-start;align-items: center;padding:10px">
         <select v-model="cameraId" @change="startScan">
           <option v-for="item of cameraList" :key="item.id" :value="item.id">{{ item.label }}</option>
         </select>
-        <label>FPS</label>
-        <input type="input" v-model="fps"  @change="startScan">
-        <label>(width, height)</label>
-        <input type="input" v-model="qrbox.width" @change="startScan">
-        <input type="input" v-model="qrbox.height" @change="startScan">
+        <span>
+          <label>FPS:</label>
+          <input style="width: 30px" type="input" v-model="fps" @change="startScan">
+        </span>
+        <span>
+          <label>width x height</label>
+          <input style="width: 30px" type="input" v-model="qrbox.width" @change="startScan">
+          x
+          <input style="width: 30px" type="input" v-model="qrbox.height" @change="startScan">
+        </span>
       </div>
       <div id="reader" width="600px"></div>
     </script>
